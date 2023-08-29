@@ -1,6 +1,7 @@
 const router = require('express').Router()
 module.exports = router;
 
+let htmlpath = ""
 let protocol = ""
 let https = false
 let hostname = ""
@@ -26,7 +27,9 @@ router.use((request, response, next) => {
   hostname = request.hostname;
   basepath = request.baseUrl;
   subpath = request.path;
+  htmlpath = require('path').join(__dirname, '../public_html/', basepath) + '/';
   query_url = request.url.substring(request.url.indexOf('?'));
+  if (!request.headers.hasOwnProperty('sec-fetch-site')) { } // if missing, do custom parsing of originalUrl......later.
   switch (request.headers['sec-fetch-site']) { // overwrite all property in case of continued connection
     case "none": direct_url = true; same_origin = same_site = cross_site = false; break;
     case "same-origin": same_origin = true; direct_url = same_site = cross_site = false; break;
@@ -43,23 +46,24 @@ router.use((request, response, next) => {
 });
 
 router.route('/form').all((request, response) => {
-  response.redirect(`https://${hostname}${basepath}/form.html${query_url}`);
-  response.end();
+  //response.redirect(`https://${hostname}${basepath}/form.html${query_url}`);
+  //response.end();
+  response.sendFile(htmlpath + 'form.html');
 });
 
 router.route('/redirect').all((request, response) => {
-  response.redirect(`https://${hostname}${basepath}/redirected${query_url}`); // GET
-  response.end();
+  response.redirect(`https://${hostname}${basepath}/redirected${query_url}`); // GET/POST -> redirected to GET (that's the rule of redirection!)
+  //response.end();
 });
 
 // all other route cases // all method(GET/POST)
 router.route('*').all((request, response) => {
-  //if (!https) {
-  //  response.redirect(`https://${hostname}${basepath}${subpath}${query_url}`); // GET
-  //} else {
+  if (!https) {
+    response.redirect(`https://${hostname}${basepath}${subpath}${query_url}`); // GET/POST -> redirected to GET (that's the rule of redirection!)
+  } else {
     response_https(request, response);
-  //}
-  response.end();
+    response.end();
+  }
 });
 
 router.use((request, response) => {
